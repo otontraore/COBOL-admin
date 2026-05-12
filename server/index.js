@@ -48,6 +48,24 @@ function authPayload(user) {
   };
 }
 
+function publicPost(post) {
+  const author = db.users.find((user) => user.id === post.authorId);
+  const tagNames = (post.tagIds || [])
+    .map((tagId) => db.tags.find((tag) => tag.id === Number(tagId)))
+    .filter(Boolean)
+    .map((tag) => tag.name);
+
+  return {
+    id: post.id,
+    title: post.title,
+    body: post.body,
+    authorDisplayName: author ? author.displayName : "",
+    tagNames,
+    createdAt: post.createdAt,
+    updatedAt: post.updatedAt,
+  };
+}
+
 // --- In-memory data with seed ---
 const db = {
   tags: require("./fixtures/tags"),
@@ -157,6 +175,23 @@ app.get("/authors/:id", (req, res) => {
   item ? res.json(publicUser(item)) : res.status(404).json({ error: "Not found" });
 });
 app.use("/tags", crud("tags"));
+app.get("/posts", (req, res) => {
+  let items = db.posts.map(publicPost);
+  const total = items.length;
+  if (req.query.perPage) {
+    const perPage = Math.max(1, Number(req.query.perPage) || 10);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const start = (page - 1) * perPage;
+    items = items.slice(start, start + perPage);
+    res.set("X-Total-Count", String(total));
+  }
+  res.json(items);
+});
+
+app.get("/posts/:id", (req, res) => {
+  const item = db.posts.find((post) => post.id === Number(req.params.id));
+  item ? res.json(publicPost(item)) : res.status(404).json({ error: "Not found" });
+});
 app.use("/posts", crud("posts", true));
 app.use("/comments", crud("comments", true));
 app.use("/permissions", crud("permissions"));

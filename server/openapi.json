@@ -1024,13 +1024,13 @@
           "body": {
             "type": "string"
           },
-          "authorId": {
-            "type": "integer"
+          "authorDisplayName": {
+            "type": "string"
           },
-          "tagIds": {
+          "tagNames": {
             "type": "array",
             "items": {
-              "type": "integer"
+              "type": "string"
             }
           },
           "createdAt": {
@@ -1046,8 +1046,8 @@
           "id",
           "title",
           "body",
-          "authorId",
-          "tagIds",
+          "authorDisplayName",
+          "tagNames",
           "createdAt",
           "updatedAt"
         ]
