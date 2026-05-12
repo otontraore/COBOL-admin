@@ -215,12 +215,17 @@ app.post("/auth/login", (req, res) => {
 });
 
 app.post("/auth/logout", (req, res) => {
-  const session = currentSession(req);
-  if (session) {
-    for (const [sessionId, storedSession] of sessions) {
-      if (storedSession === session) sessions.delete(sessionId);
-    }
+  const cookieHeader = String(req.headers.cookie || "");
+  const sidCookie = cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("sid="));
+
+  if (sidCookie) {
+    const sessionId = decodeURIComponent(sidCookie.slice(4));
+    sessions.delete(sessionId);
   }
+
   res.status(204).end();
 });
 
