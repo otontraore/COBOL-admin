@@ -19,6 +19,8 @@ working-storage section.
          15 ws-res-field-edit pic 9.
 01 ws-content-buf       pic x(16384).
 01 ws-content-len       pic 9(8) comp-5.
+01 ws-auth-user-name    pic x(64).
+01 ws-auth-permissions  pic x(4096).
 
 procedure division.
 
@@ -58,10 +60,13 @@ test-layout section.
     move 11 to ws-content-len
     move low-value to ws-html-body
     move 1 to ws-html-len
+    move "Admin" to ws-auth-user-name
+    move "admin.access" to ws-auth-permissions
     call "PAGE-LAYOUT" using
         ws-html-body ws-html-len
         ws-resource-table
         ws-content-buf ws-content-len
+        ws-auth-user-name ws-auth-permissions
     end-call
     *> Should start with DOCTYPE
     call "assert-equals" using "<!DOCTYPE html>",

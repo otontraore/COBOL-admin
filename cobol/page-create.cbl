@@ -64,10 +64,7 @@
                        LS-RES-IDX, WS-FIELD-IDX)
                        TO WS-FIELD-TYPE
 
-      *> Skip array fields
-                   IF FUNCTION TRIM(WS-FIELD-TYPE) NOT = "array"
-                       PERFORM RENDER-INPUT
-                   END-IF
+                   PERFORM RENDER-INPUT
                END-IF
            END-PERFORM
 
@@ -106,10 +103,31 @@
                '" name="' DELIMITED BY SIZE
                LS-RES-FIELD-NAME(LS-RES-IDX, WS-FIELD-IDX)
                    DELIMITED BY SPACE
+               INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
+           END-STRING
+
+           IF FUNCTION TRIM(WS-FIELD-TYPE) = "array"
+               STRING "[]" DELIMITED BY SIZE
+                   INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
+               END-STRING
+           END-IF
+
+           STRING
                '" id="' DELIMITED BY SIZE
                LS-RES-FIELD-NAME(LS-RES-IDX, WS-FIELD-IDX)
                    DELIMITED BY SPACE
-               '"></div>' DELIMITED BY SIZE
+               '"' DELIMITED BY SIZE
+               INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
+           END-STRING
+
+           IF FUNCTION TRIM(WS-FIELD-TYPE) = "array"
+               STRING
+                   ' placeholder="value1, value2"' DELIMITED BY SIZE
+                   INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
+               END-STRING
+           END-IF
+
+           STRING '></div>' DELIMITED BY SIZE
                INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
            END-STRING
            .

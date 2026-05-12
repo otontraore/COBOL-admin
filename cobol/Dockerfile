@@ -23,6 +23,7 @@ RUN cobc -free -c -I copybooks schema-loader.cbl
 RUN cobc -free -c -I copybooks http-parse.cbl
 RUN cobc -free -c -I copybooks router.cbl
 RUN cobc -free -c -I copybooks page-layout.cbl
+RUN cobc -free -c -I copybooks page-login.cbl
 RUN cobc -free -c -I copybooks page-home.cbl
 RUN cobc -free -c -I copybooks page-list.cbl
 RUN cobc -free -c -I copybooks page-404.cbl
@@ -47,6 +48,7 @@ RUN cobc -free -x -I copybooks -o cobol-admin \
     http-parse.o \
     router.o \
     page-layout.o \
+    page-login.o \
     page-home.o \
     page-list.o \
     page-404.o \
@@ -67,7 +69,7 @@ RUN cobc -free -x -I copybooks -o cobol-admin \
     -lcurl
 
 # Run tests at build time
-RUN chmod +x run-tests.sh && ./run-tests.sh
+RUN sed -i 's/\r$//' run-tests.sh && chmod +x run-tests.sh && ./run-tests.sh
 
 EXPOSE 8080
 CMD ["./cobol-admin"]

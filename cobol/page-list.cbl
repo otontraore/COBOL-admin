@@ -38,6 +38,8 @@
        01 WS-TSV-FILE-Z        PIC X(256)
            VALUE Z"/tmp/listdata.tsv".
        01 WS-ARRAY-MODE        PIC X(8) VALUE Z"array".
+    01 WS-CAN-CREATE        PIC S9(9) COMP-5 VALUE 0.
+    01 WS-CREATE-ACTION     PIC X(16) VALUE "create".
 
       *> HTML escaping
        01 WS-ESC-INPUT         PIC X(2048).
@@ -70,12 +72,14 @@
                 15 LS-RES-FIELD-TYPE PIC X(16).
                 15 LS-RES-FIELD-EDIT PIC 9.
        01 LS-RES-IDX           PIC 99.
+       01 LS-AUTH-PERMISSIONS  PIC X(4096).
 
        PROCEDURE DIVISION USING
            LS-HTML-BODY LS-HTML-LEN
            LS-RESOURCE-NAME LS-API-URL
            LS-PAGE LS-PER-PAGE LS-TOTAL-COUNT
-           LS-RESOURCE-TABLE LS-RES-IDX.
+           LS-RESOURCE-TABLE LS-RES-IDX
+           LS-AUTH-PERMISSIONS.
 
        MAIN-LOGIC.
            MOVE 1 TO WS-FETCH-OK
@@ -171,6 +175,13 @@
 
       *> Build HTML: heading, perPage selector, table, pagination
        BUILD-PAGE.
+           CALL "cobol_auth_can" USING
+               BY REFERENCE LS-AUTH-PERMISSIONS
+               BY REFERENCE LS-RESOURCE-NAME
+               BY REFERENCE WS-CREATE-ACTION
+               RETURNING WS-CAN-CREATE
+           END-CALL
+
       *> Heading with Create button
            STRING
                "<div class='show-header'>"
@@ -178,10 +189,20 @@
                "<h1>" DELIMITED BY SIZE
                LS-RESOURCE-NAME DELIMITED BY SPACE
                "</h1>" DELIMITED BY SIZE
-               "<a class='btn' href='/create/"
-                   DELIMITED BY SIZE
-               LS-RESOURCE-NAME DELIMITED BY SPACE
-               "'>Create</a></div>" DELIMITED BY SIZE
+               INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
+           END-STRING
+
+           IF WS-CAN-CREATE = 1
+               STRING
+                   "<a class='btn' href='/create/"
+                       DELIMITED BY SIZE
+                   LS-RESOURCE-NAME DELIMITED BY SPACE
+                   "'>Create</a>" DELIMITED BY SIZE
+                   INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
+               END-STRING
+           END-IF
+
+           STRING "</div>" DELIMITED BY SIZE
                INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
            END-STRING
 

@@ -13,6 +13,8 @@
        01 WS-SCAN              PIC 9(4) COMP-5 VALUE 0.
        01 WS-PARAM-NAME        PIC X(64).
        01 WS-PARAM-VAL         PIC X(64).
+       01 WS-PARAM-LEN         PIC 9(4) COMP-5 VALUE 0.
+       01 WS-PARAM-NUMERIC     PIC 9 VALUE 0.
 
        LINKAGE SECTION.
        01 LS-REQUEST-PATH      PIC X(512).
@@ -81,6 +83,12 @@
            IF FUNCTION TRIM(WS-CLEAN-PATH) = "/"
                MOVE "HOME" TO LS-ROUTE-TYPE
            ELSE
+               IF FUNCTION TRIM(WS-CLEAN-PATH) = "/login"
+                   MOVE "LOGIN" TO LS-ROUTE-TYPE
+               END-IF
+               IF FUNCTION TRIM(WS-CLEAN-PATH) = "/logout"
+                   MOVE "LOGOUT" TO LS-ROUTE-TYPE
+               END-IF
                IF WS-CLEAN-LEN > 8
                    IF WS-CLEAN-PATH(1:8) = "/static/"
                        MOVE WS-CLEAN-PATH(
@@ -251,15 +259,18 @@
                        ADD 1 TO WS-SCAN
                    END-PERFORM
                    IF WS-PARAM-VAL NOT = SPACES
-                       COMPUTE LS-PAGE =
-                           FUNCTION NUMVAL(
-                               FUNCTION TRIM(
-                                   WS-PARAM-VAL TRAILING))
-                       IF LS-PAGE < 1
-                           MOVE 1 TO LS-PAGE
-                       END-IF
-                       IF LS-PAGE > 999
-                           MOVE 999 TO LS-PAGE
+                       PERFORM VALIDATE-PARAM-NUMERIC
+                       IF WS-PARAM-NUMERIC = 1
+                           COMPUTE LS-PAGE =
+                               FUNCTION NUMVAL(
+                                   FUNCTION TRIM(
+                                       WS-PARAM-VAL TRAILING))
+                           IF LS-PAGE < 1
+                               MOVE 1 TO LS-PAGE
+                           END-IF
+                           IF LS-PAGE > 999
+                               MOVE 999 TO LS-PAGE
+                           END-IF
                        END-IF
                    END-IF
                END-IF
@@ -285,16 +296,39 @@
                    ADD 1 TO WS-SCAN
                END-PERFORM
                IF WS-PARAM-VAL NOT = SPACES
-                   COMPUTE LS-PER-PAGE =
-                       FUNCTION NUMVAL(
-                           FUNCTION TRIM(
-                               WS-PARAM-VAL TRAILING))
-                   IF LS-PER-PAGE < 1
-                       MOVE 10 TO LS-PER-PAGE
-                   END-IF
-                   IF LS-PER-PAGE > 100
-                       MOVE 100 TO LS-PER-PAGE
+                   PERFORM VALIDATE-PARAM-NUMERIC
+                   IF WS-PARAM-NUMERIC = 1
+                       COMPUTE LS-PER-PAGE =
+                           FUNCTION NUMVAL(
+                               FUNCTION TRIM(
+                                   WS-PARAM-VAL TRAILING))
+                       IF LS-PER-PAGE < 1
+                           MOVE 10 TO LS-PER-PAGE
+                       END-IF
+                       IF LS-PER-PAGE > 100
+                           MOVE 100 TO LS-PER-PAGE
+                       END-IF
                    END-IF
                END-IF
+           END-IF
+           .
+
+       VALIDATE-PARAM-NUMERIC.
+           MOVE 1 TO WS-PARAM-NUMERIC
+           MOVE FUNCTION LENGTH(
+               FUNCTION TRIM(WS-PARAM-VAL TRAILING))
+               TO WS-PARAM-LEN
+
+           IF WS-PARAM-LEN = 0
+               MOVE 0 TO WS-PARAM-NUMERIC
+           ELSE
+               PERFORM VARYING WS-IDX FROM 1 BY 1
+                   UNTIL WS-IDX > WS-PARAM-LEN
+                   IF WS-PARAM-VAL(WS-IDX:1) < "0"
+                       OR WS-PARAM-VAL(WS-IDX:1) > "9"
+                       MOVE 0 TO WS-PARAM-NUMERIC
+                       EXIT PERFORM
+                   END-IF
+               END-PERFORM
            END-IF
            .

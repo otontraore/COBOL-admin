@@ -33,6 +33,8 @@
        01 WS-FIELD-TYPE        PIC X(16).
        01 WS-FIELD-EDIT        PIC 9 VALUE 0.
        01 WS-INPUT-TYPE        PIC X(20).
+    01 WS-CAN-DELETE        PIC S9(9) COMP-5 VALUE 0.
+    01 WS-DELETE-ACTION     PIC X(16) VALUE "delete".
 
        LINKAGE SECTION.
        01 LS-HTML-BODY         PIC X(32768).
@@ -50,11 +52,13 @@
                 15 LS-RES-FIELD-TYPE PIC X(16).
                 15 LS-RES-FIELD-EDIT PIC 9.
        01 LS-RES-IDX           PIC 99.
+       01 LS-AUTH-PERMISSIONS  PIC X(4096).
 
        PROCEDURE DIVISION USING
            LS-HTML-BODY LS-HTML-LEN
            LS-RESOURCE-NAME LS-RESOURCE-ID LS-API-URL
-           LS-RESOURCE-TABLE LS-RES-IDX.
+           LS-RESOURCE-TABLE LS-RES-IDX
+           LS-AUTH-PERMISSIONS.
 
        MAIN-LOGIC.
       *> Validate resource ID before using in shell
@@ -95,6 +99,13 @@
 
       *> Build HTML form
        BUILD-FORM.
+           CALL "cobol_auth_can" USING
+               BY REFERENCE LS-AUTH-PERMISSIONS
+               BY REFERENCE LS-RESOURCE-NAME
+               BY REFERENCE WS-DELETE-ACTION
+               RETURNING WS-CAN-DELETE
+           END-CALL
+
       *> Header with cancel link
            STRING
                "<div class='show-header'>"
@@ -148,14 +159,22 @@
                "/" DELIMITED BY SIZE
                LS-RESOURCE-ID DELIMITED BY SPACE
                "'>Cancel</a>" DELIMITED BY SIZE
-               "<a class='btn btn-danger' href='/delete/"
-                   DELIMITED BY SIZE
-               LS-RESOURCE-NAME DELIMITED BY SPACE
-               "/" DELIMITED BY SIZE
-               LS-RESOURCE-ID DELIMITED BY SPACE
-               "'>Delete</a>" DELIMITED BY SIZE
-               "</div></form>"
-                   DELIMITED BY SIZE
+               INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
+           END-STRING
+
+           IF WS-CAN-DELETE = 1
+               STRING
+                   "<a class='btn btn-danger' href='/delete/"
+                       DELIMITED BY SIZE
+                   LS-RESOURCE-NAME DELIMITED BY SPACE
+                   "/" DELIMITED BY SIZE
+                   LS-RESOURCE-ID DELIMITED BY SPACE
+                   "'>Delete</a>" DELIMITED BY SIZE
+                   INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
+               END-STRING
+           END-IF
+
+           STRING "</div></form>" DELIMITED BY SIZE
                INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
            END-STRING
            .
@@ -220,12 +239,7 @@
                        END-IF
                    END-PERFORM
 
-      *> Skip array fields
-                   IF FUNCTION TRIM(WS-FIELD-TYPE) = "array"
-                       CONTINUE
-                   ELSE
-                       PERFORM RENDER-INPUT
-                   END-IF
+                   PERFORM RENDER-INPUT
                END-IF
            END-IF
            .
@@ -260,6 +274,16 @@
                WS-INPUT-TYPE DELIMITED BY SPACE
                '" name="' DELIMITED BY SIZE
                WS-FIELD-KEY DELIMITED BY SPACE
+               INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
+           END-STRING
+
+           IF FUNCTION TRIM(WS-FIELD-TYPE) = "array"
+               STRING "[]" DELIMITED BY SIZE
+                   INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
+               END-STRING
+           END-IF
+
+           STRING
                '" id="' DELIMITED BY SIZE
                WS-FIELD-KEY DELIMITED BY SPACE
                '" value="' DELIMITED BY SIZE
@@ -293,6 +317,13 @@
 
            IF WS-FIELD-EDIT = 0
                STRING " disabled" DELIMITED BY SIZE
+                   INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
+               END-STRING
+           END-IF
+
+           IF FUNCTION TRIM(WS-FIELD-TYPE) = "array"
+               STRING
+                   ' placeholder="value1, value2"' DELIMITED BY SIZE
                    INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
                END-STRING
            END-IF

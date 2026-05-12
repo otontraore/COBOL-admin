@@ -9,12 +9,50 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+function publicUser(user) {
+  if (!user) return null;
+  const { password, ...safeUser } = user;
+  return safeUser;
+}
+
+function currentSession(req) {
+  const cookie = req.headers.cookie || "";
+  const sid = cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("sid="));
+  if (!sid) return null;
+  return sessions.get(sid.slice(4));
+}
+
+function currentUser(req) {
+  const session = currentSession(req);
+  if (!session) return null;
+  return db.users.find((user) => user.id === session.userId) || null;
+}
+
+function userRole(user) {
+  return db.roles.find((role) => role.id === user.roleId) || null;
+}
+
+function authPayload(user) {
+  const role = userRole(user);
+  return {
+    user: publicUser(user),
+    role,
+    permissions: role ? role.permissions : [],
+  };
+}
+
 // --- In-memory data with seed ---
 const db = {
   authors: require("./fixtures/authors"),
   tags: require("./fixtures/tags"),
   posts: require("./fixtures/posts"),
   comments: require("./fixtures/comments"),
+  permissions: require("./fixtures/permissions"),
+  roles: require("./fixtures/roles"),
+  users: require("./fixtures/users"),
 };
 
 const counters = {
@@ -22,7 +60,12 @@ const counters = {
   tags: db.tags.length,
   posts: db.posts.length,
   comments: db.comments.length,
+  permissions: db.permissions.length,
+  roles: db.roles.length,
+  users: db.users.length,
 };
+
+const sessions = new Map();
 
 // --- Generic CRUD helper ---
 function crud(resource, timestamped = false) {
@@ -41,19 +84,21 @@ function crud(resource, timestamped = false) {
       items = items.slice(start, start + perPage);
       res.set("X-Total-Count", String(total));
     }
-    res.json(items);
+    res.json(resource === "users" ? items.map(publicUser) : items);
   });
 
   router.get("/:id", (req, res) => {
     const item = db[resource].find((i) => i.id === Number(req.params.id));
-    item ? res.json(item) : res.status(404).json({ error: "Not found" });
+    item
+      ? res.json(resource === "users" ? publicUser(item) : item)
+      : res.status(404).json({ error: "Not found" });
   });
 
   router.post("/", (req, res) => {
     const item = { id: ++counters[resource], ...req.body };
     if (timestamped) item.createdAt = new Date().toISOString();
     db[resource].push(item);
-    res.status(201).json(item);
+    res.status(201).json(resource === "users" ? publicUser(item) : item);
   });
 
   router.put("/:id", (req, res) => {
@@ -64,7 +109,7 @@ function crud(resource, timestamped = false) {
       ...req.body,
       id: db[resource][idx].id,
     };
-    res.json(db[resource][idx]);
+    res.json(resource === "users" ? publicUser(db[resource][idx]) : db[resource][idx]);
   });
 
   router.delete("/:id", (req, res) => {
@@ -82,6 +127,41 @@ app.use("/authors", crud("authors"));
 app.use("/tags", crud("tags"));
 app.use("/posts", crud("posts", true));
 app.use("/comments", crud("comments", true));
+app.use("/permissions", crud("permissions"));
+app.use("/roles", crud("roles"));
+app.use("/users", crud("users"));
+
+app.post("/auth/login", (req, res) => {
+  const username = String(req.body.username || "").trim();
+  const password = String(req.body.password || "");
+  const user = db.users.find(
+    (candidate) => candidate.username === username && candidate.password === password,
+  );
+
+  if (!user) {
+    return res.status(401).json({ error: "Invalid credentials" });
+  }
+
+  const sessionId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  sessions.set(sessionId, { userId: user.id, createdAt: new Date().toISOString() });
+  res.json({ sessionId, ...authPayload(user) });
+});
+
+app.post("/auth/logout", (req, res) => {
+  const session = currentSession(req);
+  if (session) {
+    for (const [sessionId, storedSession] of sessions) {
+      if (storedSession === session) sessions.delete(sessionId);
+    }
+  }
+  res.status(204).end();
+});
+
+app.get("/auth/me", (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: "Not authenticated" });
+  res.json(authPayload(user));
+});
 
 // --- OpenAPI spec & Swagger UI ---
 const specPath = path.join(__dirname, "openapi.json");

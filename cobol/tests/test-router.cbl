@@ -11,6 +11,8 @@ working-storage section.
 01 ws-route-resource    pic x(64).
 01 ws-page             pic 999.
 01 ws-per-page         pic 999.
+01 ws-expected-page    pic 999.
+01 ws-expected-per-page pic 999.
 01 ws-route-id         pic x(10).
 01 ws-static-path      pic x(512).
 01 ws-resource-table.
@@ -38,6 +40,8 @@ procedure division.
     perform test-home-route.
     perform test-list-valid.
     perform test-list-invalid.
+    perform test-list-query-params.
+    perform test-list-invalid-query-params.
     perform test-unknown-path.
     perform test-list-second-resource.
     perform test-show-route.
@@ -46,6 +50,8 @@ procedure division.
     perform test-create-invalid.
     perform test-delete-route.
     perform test-delete-invalid.
+    perform test-login-route.
+    perform test-logout-route.
     goback.
 
 test-home-route section.
@@ -87,6 +93,42 @@ test-list-invalid section.
         ws-route-id ws-static-path
     end-call
     call "assert-equals" using "NOTFOUND", ws-route-type(1:8).
+
+test-list-query-params section.
+    move spaces to ws-request-path
+    move "/list/authors?page=2&perPage=25" to ws-request-path
+    move 31 to ws-path-len
+    call "ROUTER" using
+        ws-request-path ws-path-len
+        ws-route-type ws-route-resource
+        ws-resource-table
+        ws-page ws-per-page
+        ws-route-id ws-static-path
+    end-call
+    call "assert-equals" using "LIST", ws-route-type(1:4).
+    call "assert-equals" using "authors", ws-route-resource(1:7).
+    move 2 to ws-expected-page
+    call "assert-equals" using ws-expected-page, ws-page.
+    move 25 to ws-expected-per-page
+    call "assert-equals" using ws-expected-per-page, ws-per-page.
+
+test-list-invalid-query-params section.
+    move spaces to ws-request-path
+    move "/list/authors?page=abc&perPage=x" to ws-request-path
+    move 32 to ws-path-len
+    call "ROUTER" using
+        ws-request-path ws-path-len
+        ws-route-type ws-route-resource
+        ws-resource-table
+        ws-page ws-per-page
+        ws-route-id ws-static-path
+    end-call
+    call "assert-equals" using "LIST", ws-route-type(1:4).
+    call "assert-equals" using "authors", ws-route-resource(1:7).
+    move 1 to ws-expected-page
+    call "assert-equals" using ws-expected-page, ws-page.
+    move 10 to ws-expected-per-page
+    call "assert-equals" using ws-expected-per-page, ws-per-page.
 
 test-unknown-path section.
     move spaces to ws-request-path
@@ -197,5 +239,31 @@ test-delete-invalid section.
         ws-route-id ws-static-path
     end-call
     call "assert-equals" using "NOTFOUND", ws-route-type(1:8).
+
+test-login-route section.
+    move spaces to ws-request-path
+    move "/login" to ws-request-path
+    move 6 to ws-path-len
+    call "ROUTER" using
+        ws-request-path ws-path-len
+        ws-route-type ws-route-resource
+        ws-resource-table
+        ws-page ws-per-page
+        ws-route-id ws-static-path
+    end-call
+    call "assert-equals" using "LOGIN", ws-route-type(1:5).
+
+test-logout-route section.
+    move spaces to ws-request-path
+    move "/logout" to ws-request-path
+    move 7 to ws-path-len
+    call "ROUTER" using
+        ws-request-path ws-path-len
+        ws-route-type ws-route-resource
+        ws-resource-table
+        ws-page ws-per-page
+        ws-route-id ws-static-path
+    end-call
+    call "assert-equals" using "LOGOUT", ws-route-type(1:6).
 
 end program test-router.

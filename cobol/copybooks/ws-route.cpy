@@ -7,6 +7,8 @@
           88 ROUTE-CREATE      VALUE "CREATE".
           88 ROUTE-DELETE      VALUE "DELETE".
           88 ROUTE-STATIC      VALUE "STATIC".
+          88 ROUTE-LOGIN       VALUE "LOGIN".
+          88 ROUTE-LOGOUT      VALUE "LOGOUT".
           88 ROUTE-NOT-FOUND   VALUE "NOTFOUND".
        01 WS-ROUTE-RESOURCE    PIC X(64).
        01 WS-ROUTE-ID          PIC X(10).

@@ -23,6 +23,8 @@
        01 WS-FETCH-STATUS      PIC 9 VALUE 0.
        01 WS-VAL-LEN           PIC 9(4) COMP-5 VALUE 0.
        01 WS-LINE-LEN          PIC 9(4) COMP-5 VALUE 0.
+    01 WS-CAN-UPDATE        PIC S9(9) COMP-5 VALUE 0.
+    01 WS-UPDATE-ACTION     PIC X(16) VALUE "update".
 
       *> HTML escaping
        01 WS-ESC-INPUT         PIC X(2048).
@@ -46,11 +48,13 @@
                 15 LS-RES-FIELD-TYPE PIC X(16).
                 15 LS-RES-FIELD-EDIT PIC 9.
        01 LS-RES-IDX           PIC 99.
+       01 LS-AUTH-PERMISSIONS  PIC X(4096).
 
        PROCEDURE DIVISION USING
            LS-HTML-BODY LS-HTML-LEN
            LS-RESOURCE-NAME LS-RESOURCE-ID LS-API-URL
-           LS-RESOURCE-TABLE LS-RES-IDX.
+           LS-RESOURCE-TABLE LS-RES-IDX
+           LS-AUTH-PERMISSIONS.
 
        MAIN-LOGIC.
       *> Validate resource ID before using in shell
@@ -91,6 +95,13 @@
 
       *> Build HTML: heading, back link, field table
        BUILD-PAGE.
+           CALL "cobol_auth_can" USING
+               BY REFERENCE LS-AUTH-PERMISSIONS
+               BY REFERENCE LS-RESOURCE-NAME
+               BY REFERENCE WS-UPDATE-ACTION
+               RETURNING WS-CAN-UPDATE
+           END-CALL
+
       *> Heading + back link
            STRING
                "<div class='show-header'>"
@@ -103,12 +114,22 @@
                "<a href='/list/" DELIMITED BY SIZE
                LS-RESOURCE-NAME DELIMITED BY SPACE
                "'>Back to list</a></div>" DELIMITED BY SIZE
-               "<a class='btn' href='/edit/"
-                   DELIMITED BY SIZE
-               LS-RESOURCE-NAME DELIMITED BY SPACE
-               "/" DELIMITED BY SIZE
-               LS-RESOURCE-ID DELIMITED BY SPACE
-               "'>Edit</a></div>" DELIMITED BY SIZE
+               INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
+           END-STRING
+
+           IF WS-CAN-UPDATE = 1
+               STRING
+                   "<a class='btn' href='/edit/"
+                       DELIMITED BY SIZE
+                   LS-RESOURCE-NAME DELIMITED BY SPACE
+                   "/" DELIMITED BY SIZE
+                   LS-RESOURCE-ID DELIMITED BY SPACE
+                   "'>Edit</a>" DELIMITED BY SIZE
+                   INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
+               END-STRING
+           END-IF
+
+           STRING "</div>" DELIMITED BY SIZE
                INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
            END-STRING
 

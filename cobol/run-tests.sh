@@ -6,6 +6,7 @@ cobc -free -c -I copybooks template-engine.cbl
 cobc -free -c -I copybooks http-parse.cbl
 cobc -free -c -I copybooks router.cbl
 cobc -free -c -I copybooks page-layout.cbl
+cobc -free -c -I copybooks page-login.cbl
 cobc -free -c -I copybooks page-home.cbl
 cobc -free -c -I copybooks page-list.cbl
 cobc -free -c -I copybooks page-404.cbl
@@ -35,6 +36,7 @@ cobc -x -free -debug -I copybooks \
     http-parse.o \
     router.o \
     page-layout.o \
+    page-login.o \
     page-home.o \
     page-list.o \
     page-404.o \
