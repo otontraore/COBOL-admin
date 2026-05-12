@@ -46,10 +46,11 @@ module.exports = Array.from({ length: 150 }, (_, i) => ({
   id: i + 1,
   title: titles[i % titles.length] + (i >= titles.length ? ` (Part ${Math.floor(i / titles.length) + 1})` : ""),
   body: lorem[i % lorem.length],
-  authorId: (i % numAuthors) + 1,
+  authorId: (i % numAuthors) + 4,
   tagIds: [
     (i % numTags) + 1,
     ((i * 3 + 7) % numTags) + 1,
   ],
   createdAt: new Date(2025, Math.floor(i / 28), (i % 28) + 1).toISOString(),
+  updatedAt: new Date(2025, Math.floor(i / 28), (i % 28) + 1, 12).toISOString(),
 }));

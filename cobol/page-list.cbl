@@ -53,6 +53,7 @@
              10 WS-COL-REF-RES PIC X(64).
        01 WS-REF-RESULT        PIC X(64).
        01 WS-CELL-VALUE        PIC X(256).
+    01 WS-SKIP-COL          PIC 9 VALUE 0.
 
        LINKAGE SECTION.
        01 LS-HTML-BODY         PIC X(32768).
@@ -270,13 +271,21 @@
 
            PERFORM VARYING WS-FIELD-IDX FROM 1 BY 1
                UNTIL WS-FIELD-IDX > LS-RES-FIELD-COUNT(LS-RES-IDX)
-               STRING
-                   "<th>" DELIMITED BY SIZE
-                   LS-RES-FIELD-NAME(LS-RES-IDX, WS-FIELD-IDX)
-                       DELIMITED BY SPACE
-                   "</th>" DELIMITED BY SIZE
-                   INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
-               END-STRING
+               MOVE 0 TO WS-SKIP-COL
+               IF LS-RESOURCE-NAME = "users"
+                   AND LS-RES-FIELD-NAME(
+                       LS-RES-IDX, WS-FIELD-IDX) = "roleId"
+                   MOVE 1 TO WS-SKIP-COL
+               END-IF
+               IF WS-SKIP-COL = 0
+                   STRING
+                       "<th>" DELIMITED BY SIZE
+                       LS-RES-FIELD-NAME(LS-RES-IDX, WS-FIELD-IDX)
+                           DELIMITED BY SPACE
+                       "</th>" DELIMITED BY SIZE
+                       INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
+                   END-STRING
+               END-IF
            END-PERFORM
 
            STRING
@@ -398,6 +407,12 @@
            .
 
        WRITE-CELL.
+           IF LS-RESOURCE-NAME = "users"
+               AND LS-RES-FIELD-NAME(LS-RES-IDX, WS-COL-IDX)
+                   = "roleId"
+               EXIT PARAGRAPH
+           END-IF
+
            STRING "<td>" DELIMITED BY SIZE
                INTO LS-HTML-BODY WITH POINTER LS-HTML-LEN
            END-STRING

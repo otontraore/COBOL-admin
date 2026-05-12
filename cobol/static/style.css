@@ -52,7 +52,6 @@ nav a {
   text-decoration: none;
   padding: 4px 12px;
   font-size: 18px;
-  text-transform: uppercase;
 }
 
 nav a:hover {
@@ -60,11 +59,29 @@ nav a:hover {
   color: #000;
 }
 
+.nav-user {
+  display: block;
+  padding: 8px 12px 4px;
+  color: #000;
+  border-top: 2px solid #fff;
+  text-transform: uppercase;
+}
+
 /* Main content */
 main {
   flex: 1;
   padding: 16px 24px;
   background: #0000a8;
+}
+
+footer {
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 2px solid #a8a8a8;
+}
+
+footer a {
+  margin-right: 16px;
 }
 
 h1 {

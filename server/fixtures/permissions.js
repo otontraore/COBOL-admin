@@ -1,8 +1,5 @@
 module.exports = [
   { id: 1, key: "authors.read", resource: "authors", action: "read", label: "Read authors" },
-  { id: 2, key: "authors.create", resource: "authors", action: "create", label: "Create authors" },
-  { id: 3, key: "authors.update", resource: "authors", action: "update", label: "Update authors" },
-  { id: 4, key: "authors.delete", resource: "authors", action: "delete", label: "Delete authors" },
   { id: 5, key: "tags.read", resource: "tags", action: "read", label: "Read tags" },
   { id: 6, key: "tags.create", resource: "tags", action: "create", label: "Create tags" },
   { id: 7, key: "tags.update", resource: "tags", action: "update", label: "Update tags" },

@@ -13,6 +13,7 @@
        01 WS-NAV-PTR             PIC 9(5) COMP-5.
     01 WS-CAN-READ            PIC S9(9) COMP-5 VALUE 0.
     01 WS-READ-ACTION         PIC X(16) VALUE "read".
+         01 WS-NAV-LABEL          PIC X(64).
 
        LINKAGE SECTION.
        01 LS-HTML-BODY         PIC X(32768).
@@ -50,11 +51,12 @@
                    RETURNING WS-CAN-READ
                END-CALL
                IF WS-CAN-READ = 1
+                   PERFORM SET-NAV-LABEL
                    STRING
                        "<a href='/list/" DELIMITED BY SIZE
                        LS-RES-NAME(WS-IDX) DELIMITED BY SPACE
                        "'>" DELIMITED BY SIZE
-                       LS-RES-NAME(WS-IDX) DELIMITED BY SPACE
+                       WS-NAV-LABEL DELIMITED BY SPACE
                        "</a>" DELIMITED BY SIZE
                        INTO WS-NAV-LINKS WITH POINTER WS-NAV-PTR
                    END-STRING
@@ -93,3 +95,28 @@
                LS-CONTENT-BUF LS-CONTENT-LEN
            END-CALL
            GOBACK.
+
+       SET-NAV-LABEL.
+           MOVE LS-RES-NAME(WS-IDX) TO WS-NAV-LABEL
+           IF LS-RES-NAME(WS-IDX) = "posts"
+               MOVE "Posts" TO WS-NAV-LABEL
+           END-IF
+           IF LS-RES-NAME(WS-IDX) = "comments"
+               MOVE "comments" TO WS-NAV-LABEL
+           END-IF
+           IF LS-RES-NAME(WS-IDX) = "tags"
+               MOVE "Tags" TO WS-NAV-LABEL
+           END-IF
+           IF LS-RES-NAME(WS-IDX) = "authors"
+               MOVE "Authors" TO WS-NAV-LABEL
+           END-IF
+           IF LS-RES-NAME(WS-IDX) = "users"
+               MOVE "users" TO WS-NAV-LABEL
+           END-IF
+           IF LS-RES-NAME(WS-IDX) = "roles"
+               MOVE "Roles" TO WS-NAV-LABEL
+           END-IF
+           IF LS-RES-NAME(WS-IDX) = "permissions"
+               MOVE "Permissions" TO WS-NAV-LABEL
+           END-IF
+           .

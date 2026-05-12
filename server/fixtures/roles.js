@@ -35,4 +35,18 @@ module.exports = [
       "comments.read",
     ],
   },
+  {
+    id: 4,
+    name: "author",
+    label: "Author",
+    permissions: [
+      "authors.read",
+      "tags.read",
+      "posts.read",
+      "posts.create",
+      "posts.update",
+      "comments.read",
+      "comments.create",
+    ],
+  },
 ];

@@ -119,6 +119,24 @@ static const char *find_case_insensitive(const char *haystack,
     return NULL;
 }
 
+static int resource_rank(const char *resource) {
+    if (strcmp(resource, "posts") == 0) return 1;
+    if (strcmp(resource, "comments") == 0) return 2;
+    if (strcmp(resource, "tags") == 0) return 3;
+    if (strcmp(resource, "authors") == 0) return 4;
+    if (strcmp(resource, "users") == 0) return 5;
+    if (strcmp(resource, "roles") == 0) return 6;
+    if (strcmp(resource, "permissions") == 0) return 7;
+    return 100;
+}
+
+static int compare_resources(const char *left, const char *right) {
+    int left_rank = resource_rank(left);
+    int right_rank = resource_rank(right);
+    if (left_rank != right_rank) return left_rank - right_rank;
+    return strcmp(left, right);
+}
+
 /* --- HTTP helpers using libcurl --- */
 
 int cobol_http_get(const char *url, const char *response_file,
@@ -465,7 +483,7 @@ int cobol_json_resources(const char *json_file,
     /* Sort */
     for (int i = 0; i < count - 1; i++)
         for (int j = i + 1; j < count; j++)
-            if (strcmp(resources[i], resources[j]) > 0) {
+            if (compare_resources(resources[i], resources[j]) > 0) {
                 char tmp[64];
                 strcpy(tmp, resources[i]);
                 strcpy(resources[i], resources[j]);
@@ -799,11 +817,14 @@ int cobol_auth_login(const char *api_url_cobol, const char *form_body,
     copy_cobol_string(api_url, sizeof(api_url), api_url_cobol, 256);
 
     char body[4096];
-    int len = body_len;
-    if (len < 0) len = 0;
-    if (len > 4095) len = 4095;
+    (void)body_len;
+    int len = 4095;
     memcpy(body, form_body, (size_t)len);
     body[len] = 0;
+    while (len > 0 && (body[len - 1] == ' ' || body[len - 1] == '\r' ||
+           body[len - 1] == '\n' || body[len - 1] == 0)) {
+        body[--len] = 0;
+    }
 
     char username[256] = {0};
     char password[256] = {0};
@@ -891,6 +912,7 @@ int cobol_auth_can(const char *permissions_cobol, const char *resource_cobol,
     copy_cobol_string(resource, sizeof(resource), resource_cobol, 64);
     copy_cobol_string(action, sizeof(action), action_cobol, 16);
 
+    if (strcmp(resource, "authors") == 0 && strcmp(action, "read") != 0) return 0;
     if (permission_list_has(permissions, "admin.access")) return 1;
     if (permission_list_has(permissions, "rbac.manage") &&
         (strcmp(resource, "users") == 0 || strcmp(resource, "roles") == 0 ||

@@ -12,7 +12,11 @@ app.use(express.json());
 function publicUser(user) {
   if (!user) return null;
   const { password, ...safeUser } = user;
-  return safeUser;
+  const role = db.roles.find((candidate) => candidate.id === user.roleId);
+  return {
+    ...safeUser,
+    roleLabel: role ? role.label : "",
+  };
 }
 
 function currentSession(req) {
@@ -46,7 +50,6 @@ function authPayload(user) {
 
 // --- In-memory data with seed ---
 const db = {
-  authors: require("./fixtures/authors"),
   tags: require("./fixtures/tags"),
   posts: require("./fixtures/posts"),
   comments: require("./fixtures/comments"),
@@ -56,13 +59,12 @@ const db = {
 };
 
 const counters = {
-  authors: db.authors.length,
-  tags: db.tags.length,
-  posts: db.posts.length,
-  comments: db.comments.length,
-  permissions: db.permissions.length,
-  roles: db.roles.length,
-  users: db.users.length,
+  tags: Math.max(...db.tags.map((item) => item.id), 0),
+  posts: Math.max(...db.posts.map((item) => item.id), 0),
+  comments: Math.max(...db.comments.map((item) => item.id), 0),
+  permissions: Math.max(...db.permissions.map((item) => item.id), 0),
+  roles: Math.max(...db.roles.map((item) => item.id), 0),
+  users: Math.max(...db.users.map((item) => item.id), 0),
 };
 
 const sessions = new Map();
@@ -95,8 +97,12 @@ function crud(resource, timestamped = false) {
   });
 
   router.post("/", (req, res) => {
+    const now = new Date().toISOString();
     const item = { id: ++counters[resource], ...req.body };
-    if (timestamped) item.createdAt = new Date().toISOString();
+    if (timestamped) {
+      item.createdAt = now;
+      item.updatedAt = now;
+    }
     db[resource].push(item);
     res.status(201).json(resource === "users" ? publicUser(item) : item);
   });
@@ -104,11 +110,13 @@ function crud(resource, timestamped = false) {
   router.put("/:id", (req, res) => {
     const idx = db[resource].findIndex((i) => i.id === Number(req.params.id));
     if (idx === -1) return res.status(404).json({ error: "Not found" });
+    const now = new Date().toISOString();
     db[resource][idx] = {
       ...db[resource][idx],
       ...req.body,
       id: db[resource][idx].id,
     };
+    if (timestamped) db[resource][idx].updatedAt = now;
     res.json(resource === "users" ? publicUser(db[resource][idx]) : db[resource][idx]);
   });
 
@@ -123,13 +131,37 @@ function crud(resource, timestamped = false) {
 }
 
 // --- Routes ---
-app.use("/authors", crud("authors"));
+app.get("/authors", (req, res) => {
+  const authorRole = db.roles.find((role) => role.name === "author");
+  let items = authorRole
+    ? db.users.filter((user) => user.roleId === authorRole.id).map(publicUser)
+    : [];
+  const total = items.length;
+  if (req.query.perPage) {
+    const perPage = Math.max(1, Number(req.query.perPage) || 10);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const start = (page - 1) * perPage;
+    items = items.slice(start, start + perPage);
+    res.set("X-Total-Count", String(total));
+  }
+  res.json(items);
+});
+
+app.get("/authors/:id", (req, res) => {
+  const authorRole = db.roles.find((role) => role.name === "author");
+  const item = authorRole
+    ? db.users.find(
+        (user) => user.id === Number(req.params.id) && user.roleId === authorRole.id,
+      )
+    : null;
+  item ? res.json(publicUser(item)) : res.status(404).json({ error: "Not found" });
+});
 app.use("/tags", crud("tags"));
 app.use("/posts", crud("posts", true));
 app.use("/comments", crud("comments", true));
 app.use("/permissions", crud("permissions"));
 app.use("/roles", crud("roles"));
-app.use("/users", crud("users"));
+app.use("/users", crud("users", true));
 
 app.post("/auth/login", (req, res) => {
   const username = String(req.body.username || "").trim();

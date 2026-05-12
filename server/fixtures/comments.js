@@ -38,4 +38,5 @@ module.exports = Array.from({ length: 200 }, (_, i) => ({
   body: lorem[i % lorem.length],
   authorName: commenterNames[i % commenterNames.length],
   createdAt: new Date(2025, Math.floor(i / 28), (i % 28) + 1, i % 24, (i * 7) % 60).toISOString(),
+  updatedAt: new Date(2025, Math.floor(i / 28), (i % 28) + 1, i % 24, (i * 7 + 5) % 60).toISOString(),
 }));
